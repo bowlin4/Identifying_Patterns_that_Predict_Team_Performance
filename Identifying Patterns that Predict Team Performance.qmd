@@ -1,0 +1,218 @@
+---
+title: "Identifying Patterns that Predict Team Performance"
+author: "Hannah Bowlin"
+format: pdf
+---
+# Premise. 
+I was asked to conduct a network survey of the advice networks of 100 work teams at a large organization, with the goal of identifying patterns in the advice network that predicted teams with 1) high performance and 2) high employee satisfaction.
+
+## Team Performance
+Performance of employees is a high priority for organizations as it directly impacts their bottom lines, therefore, organizations are seeking ways to increase performance. Understanding the characteristics of high-performing teams can help organizations to form more of these teams and encourage higher performance overall. Past research suggests that team density is positively correlated with team performance for advice networks, though this was a general measure of team performance rather than dividing performance into a team’s outcomes on different tasks (Jin, 2020). In this situation, advice-seeking relationships are very prevalent in the work team, meaning important information about how to do a task correctly or more efficiently, or tips on who can help with a certain topic are shared throughout the team and may increase the performance of the individuals (and the group) because the employees are better equipped to do their jobs. Zhang and Peterson (2011) also studied advice networks and discovered that when advice networks have low centralization, then the positive impact of density on team performance is greater. 
+Alternatively, team performance may be impacted by the degree of hierarchy of the group, as Cummings and Cross (2003) found that more hierarchical structures are more likely to have low performance. Greer et al.’s (2018) findings support this relationship, as well, and further explain that one cause of this is that hierarchical teams are more likely to experience conflict. However, Greer et al. (2018) also found that in some circumstances, like when the task at hand is ambiguous, hierarchy actually improved team performance. 
+In the current investigation, both density and hierarchy will be measured and compared to team performance. The investigation into the connection between hierarchy and team performance is more exploratory and seeks to understand whether the positive or negative relationship is further supported by this context. Correlations will be run to determine whether density is significantly related to team performance and whether hierarchy is significantly related to team performance. 
+## Employee Satisfaction
+Conceptually, employee satisfaction and team performance are related. In some cases, satisfaction may influence performance, but performance may also influence satisfaction. However, it is useful here to understand which network measures are related to both concepts in order to understand if there are any differences in how the network structure impacts these two outcomes.
+Although there has been less research conducted on predictors of employee satisfaction, there is some evidence that a network’s degree of hierarchy is negatively related to job satisfaction (Bunderson et al., 2016). Hierarchy may create higher conflict among members of the group and this conflict evokes negative affect and lower job satisfaction scores. Anderson and Brown (2010) found that individuals who are part of networks that have a more pronounced hierarchy perform worse on attitude measures. This attitude may impact the level of job satisfaction an employee experiences. In a more hierarchical advice network, helpful information may be trickling down through a select few individuals and not reaching all levels of the team. This may lead to decreased satisfaction with the job as well as with the organizational environment. 
+In the current investigation, hierarchy will be measured and compared to employee satisfaction. A correlation will be run to determine whether hierarchy is significantly related to employee satisfaction. 
+While evidence from the literature may show a tendency for a network measure to lead to certain outcomes, the context and unique circumstances of the situation must be taken into account with these results to make an accurate determination of what further action should be taken. Any recommendations provided should be unique to that situation and never a one-size-fits-all generalized recommendation.  
+
+# Part 1
+## Step 1. Import the necessary libraries.
+
+```{r}
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(sna)
+```
+
+## Step 2. Import the data and save it as nodes and edges.
+
+```{r}
+fake_nets <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/COMPS/simulated_networks.Rds")
+
+productivity_scores <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/COMPS/simulated_productivity.Rds")
+```
+
+## Step 3. Plot the first 10 network graphs to begin visualizing the work groups.
+
+```{r}
+for (i in 1:10) {
+  network <- fake_nets[[i]]
+  
+  plot_title <- paste("Network", i)
+  print(ggraph(network, layout = 'kk') +
+          geom_edge_link() +
+          geom_node_point() +
+          scale_color_continuous(name = "Satisfactions") +
+          ggtitle(plot_title))
+}
+```
+
+## Step 4. Calculate the density for each of the networks. 
+
+```{r}
+fake_nets <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/Spring 2024/COMPS/simulated_networks.Rds")
+
+for (i in 1:length(fake_nets)) {
+  igraph_network <- as.igraph(fake_nets[[i]])  
+  density <- graph.density(igraph_network)    
+  attr(fake_nets[[i]], "density") <- density   
+}
+
+saveRDS(fake_nets, "/Users/hdbow/Dropbox/Hannah/Purdue/Spring 2024/COMPS/fake_nets_with_density.Rds")
+```
+
+Ensure that the density scores are properly calculated. The density scores and the visualizations appear to confirm that the density scores are properly calculated. For example, network 5 is visibly less dense than the first four networks, and its density score is also lower.
+
+```{r}
+fake_nets <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/Spring 2024/COMPS/fake_nets_with_density.Rds")
+
+for (i in 1:min(5, length(fake_nets))) {
+  density_score <- attr(fake_nets[[i]], "density")
+  cat("Network", i, "Density Score:", density_score, "\n")
+}
+```
+
+## Step 5. Calculate the hierarchy scores for each of the networks. 
+
+```{r}
+fake_nets <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/Spring 2024/COMPS/simulated_networks.Rds")
+
+tidygraph_to_adjacency <- function(graph) {
+  as_adjacency_matrix(graph, sparse = FALSE)
+}
+
+for (i in 1:length(fake_nets)) {
+  adjacency_matrix <- tidygraph_to_adjacency(fake_nets[[i]])
+  hierarchy_score <- hierarchy(adjacency_matrix)
+  attr(fake_nets[[i]], "hierarchy_score") <- hierarchy_score
+}
+
+saveRDS(fake_nets, "/Users/hdbow/Dropbox/Hannah/Purdue/Spring 2024/COMPS/fake_nets_with_hierarchy.Rds")
+
+```
+
+Ensure that the hierarchy scores are properly calculated.
+
+```{r}
+fake_nets <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/COMPS/fake_nets_with_hierarchy.Rds")
+
+for (i in 1:min(5, length(fake_nets))) {
+  hierarchy_score <- attr(fake_nets[[i]], "hierarchy_score")
+  cat("Network", i, "Hierarchy Score:", hierarchy_score, "\n")
+}
+```
+
+# Part 2. Using some of the network measures identified, statistical analysis was performed of the networks.
+
+## Step 1. Run correlations to determine if there is a relationship between density and team performance, hierarchy and team performance, and hierarchy and employee satisfaction.
+
+```{r}
+fake_nets_with_density <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/COMPS/fake_nets_with_density.Rds")
+
+density_scores <- sapply(fake_nets_with_density, function(network) attr(network, "density"))
+
+valid_indices <- complete.cases(productivity_scores, density_scores)
+current_productivity_scores <- productivity_scores[valid_indices]
+current_density_scores <- unlist(density_scores)[valid_indices]
+
+correlation_test <- cor.test(current_productivity_scores, current_density_scores)
+
+correlation_coefficient <- correlation_test$estimate
+significance_value <- correlation_test$p.value
+
+cat("Correlation Coefficient:", correlation_coefficient, "\n")
+cat("Significance Value:", significance_value, "\n")
+```
+
+Results show a statistically significant positive weak correlation between density and team performance, r = .23, p = .022. This result shows that denser team networks are associated with higher team performance. This finding is supported by previous research. 
+
+## Step 2. Attempt to run correlation test between hierarchy and team performance.
+
+```{r}
+fake_nets_with_hierarchy <- readRDS("/Users/hdbow/Dropbox/Hannah/Purdue/Spring 2024/COMPS/fake_nets_with_hierarchy.Rds")
+
+hierarchy_scores <- sapply(fake_nets_with_hierarchy, function(network) attr(network, "hierarchy"))
+
+valid_indices <- complete.cases(productivity_scores, hierarchy_scores)
+current_productivity_scores <- productivity_scores[valid_indices]
+current_hierarchy_scores <- unlist(hierarchy_scores)[valid_indices]
+
+correlation_test <- cor.test(current_productivity_scores, current_hierarchy_scores)
+
+correlation_coefficient <- correlation_test$estimate
+significance_value <- correlation_test$p.value
+
+cat("Correlation Coefficient:", correlation_coefficient, "\n")
+cat("Significance Value:", significance_value, "\n")
+```
+
+## Step 3. Create average satisfaction scores for each network.
+
+```{r}
+for (i in seq_along(fake_nets_with_hierarchy)) {
+  network <- fake_nets_with_hierarchy[[i]]
+  
+  avg_satisfaction <- mean(network %>%
+                             activate(nodes) %>%
+                             pull(satisfaction))
+  
+
+  network <- network %>%
+    set_graph_attr("average_satisfaction", value = avg_satisfaction)
+  
+  fake_nets_with_hierarchy[[i]] <- network
+}
+```
+
+## Step 4. Confirm creation of average satisfaction scores for each network. 
+
+```{r}
+for (i in seq_along(fake_nets_with_hierarchy)) {
+  network <- fake_nets_with_hierarchy[[i]]
+  
+  avg_satisfaction_attr <- graph_attr(network, "average_satisfaction")
+  
+  avg_satisfaction_calc <- mean(network %>%
+                                  activate(nodes) %>%
+                                  pull(satisfaction), na.rm = TRUE)
+  
+  cat("Network", i, ": \n")
+  cat("   Calculated average satisfaction:", avg_satisfaction_calc, "\n")
+  cat("   Attribute average satisfaction:", avg_satisfaction_attr, "\n")
+}
+```
+
+## Step 5. Attempt to run correlation test between hierarchy and employee satisfaction.
+
+```{r}
+avg_satisfaction_scores <- numeric(length(fake_nets_with_hierarchy))
+hierarchy_scores <- numeric(length(fake_nets_with_hierarchy))
+
+for (i in seq_along(fake_nets_with_hierarchy)) {
+  network <- fake_nets_with_hierarchy[[i]]
+  
+  avg_satisfaction_scores[i] <- graph_attr(network, "average_satisfaction")
+  
+  hierarchy_scores[i] <- graph_attr(network, "hierarchy_score")  
+}
+
+correlation <- cor(avg_satisfaction_scores, hierarchy_scores)
+
+print(correlation)
+```
+
+# Details of the Analysis Variables
+## Team Performance
+Performance of employees is a high priority for organizations as it directly impacts their bottom lines, therefore, organizations are seeking ways to increase performance. Understanding the characteristics of high-performing teams can help organizations to form more of these teams and encourage higher performance overall. Past research suggests that team density is positively correlated with team performance for advice networks, though this was a general measure of team performance rather than dividing performance into a team’s outcomes on different tasks (Jin, 2020). In this situation, advice-seeking relationships are very prevalent in the work team, meaning important information about how to do a task correctly or more efficiently, or tips on who can help with a certain topic are shared throughout the team and may increase the performance of the individuals (and the group) because the employees are better equipped to do their jobs. Zhang and Peterson (2011) also studied advice networks and discovered that when advice networks have low centralization, then the positive impact of density on team performance is greater. 
+Alternatively, team performance may be impacted by the degree of hierarchy of the group, as Cummings and Cross (2003) found that more hierarchical structures are more likely to have low performance. Greer et al.’s (2018) findings support this relationship, as well, and further explain that one cause of this is that hierarchical teams are more likely to experience conflict. However, Greer et al. (2018) also found that in some circumstances, like when the task at hand is ambiguous, hierarchy actually improved team performance. 
+In the current investigation, both density and hierarchy will be measured and compared to team performance. The investigation into the connection between hierarchy and team performance is more exploratory and seeks to understand whether the positive or negative relationship is further supported by this context. Correlations will be run to determine whether density is significantly related to team performance and whether hierarchy is significantly related to team performance. 
+## Employee Satisfaction
+Conceptually, employee satisfaction and team performance are related. In some cases, satisfaction may influence performance, but performance may also influence satisfaction. However, it is useful here to understand which network measures are related to both concepts in order to understand if there are any differences in how the network structure impacts these two outcomes.
+Although there has been less research conducted on predictors of employee satisfaction, there is some evidence that a network’s degree of hierarchy is negatively related to job satisfaction (Bunderson et al., 2016). Hierarchy may create higher conflict among members of the group and this conflict evokes negative affect and lower job satisfaction scores. Anderson and Brown (2010) found that individuals who are part of networks that have a more pronounced hierarchy perform worse on attitude measures. This attitude may impact the level of job satisfaction an employee experiences. In a more hierarchical advice network, helpful information may be trickling down through a select few individuals and not reaching all levels of the team. This may lead to decreased satisfaction with the job as well as with the organizational environment. 
+In the current investigation, hierarchy will be measured and compared to employee satisfaction. A correlation will be run to determine whether hierarchy is significantly related to employee satisfaction. 
+While evidence from the literature may show a tendency for a network measure to lead to certain outcomes, the context and unique circumstances of the situation must be taken into account with these results to make an accurate determination of what further action should be taken. Any recommendations provided should be unique to that situation and never a one-size-fits-all generalized recommendation.
